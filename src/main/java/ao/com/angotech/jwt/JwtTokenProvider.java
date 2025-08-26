@@ -32,11 +32,11 @@ public class JwtTokenProvider {
 
     private static Date toExpireDate(Date start) {
         LocalDateTime dateTime = start.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-        LocalDateTime and = dateTime.plusDays(EXPIRE_DAYS).plusHours(EXPIRE_HOURS).minusMinutes(EXPIRE_MINUTES);
+        LocalDateTime and = dateTime.plusDays(EXPIRE_DAYS).plusHours(EXPIRE_HOURS).plusMinutes(EXPIRE_MINUTES);
         return Date.from(and.atZone(ZoneId.systemDefault()).toInstant());
     }
 
-    public static JwtToken createToken(String email, String role) {
+    public static JwtToken createToken(String email) {
 
         Date issueAt = new Date();
         Date limit = toExpireDate(issueAt);
@@ -47,14 +47,14 @@ public class JwtTokenProvider {
                 .setIssuedAt(issueAt)
                 .setExpiration(limit)
                 .signWith(generateKey(), SignatureAlgorithm.HS256)
-                .claim("role", role)
                 .compact();
 
         return new JwtToken(token);
     }
 
     public static String getEmailFromToken(String token) {
-        return getClaimsFromToken(token).getSubject();
+        Claims claims = getClaimsFromToken(token);
+        return claims != null ? claims.getSubject() : null;
     }
 
     private static Claims getClaimsFromToken(String token) {
@@ -64,13 +64,12 @@ public class JwtTokenProvider {
                     .parseClaimsJws(refacturToken(token)).getBody();
         } catch (JwtException ex) {
             logger.error(String.format("Token inválido %s", ex.getMessage()));
+            return null;
         }
-
-        return null;
     }
 
     private static String refacturToken(String token) {
-        if (token.startsWith(JWT_BEARER)) {
+        if (token != null && token.startsWith(JWT_BEARER)) {
             return token.substring(JWT_BEARER.length());
         }
 
@@ -84,10 +83,12 @@ public class JwtTokenProvider {
                     .parseClaimsJws(refacturToken(token));
 
             return true;
+        } catch (ExpiredJwtException ex) {
+            logger.warn("Token expirado: {}", ex.getMessage());
+            return false;
         } catch (JwtException ex) {
             logger.error(String.format("Token inválido %s", ex.getMessage()));
+            return false;
         }
-
-        return false;
     }
 }

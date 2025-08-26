@@ -18,4 +18,4 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 server:
-  port: 9091
+  port: 9099

@@ -12,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -31,36 +32,60 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException,
             IOException {
 
-        String token = request.getHeader(JwtTokenProvider.JWT_AUTHORIZATION);
+        String token = extractTokenFromRequest(request);
 
-        if (token == null || !token.startsWith(JwtTokenProvider.JWT_BEARER)) {
-            logger.info("JWT Token está nulo, vázio ou não iniciado com 'Bearer '");
+        if (!StringUtils.hasText(token)) {
+            logger.debug("Token não encontrado no cabeçalho Authorization");
             filterChain.doFilter(request, response);
             return;
         }
 
         if (!JwtTokenProvider.isTokenValid(token)) {
-            logger.info("JWT TOKEN está inválido ou experirado");
+            logger.warn("Token JWT inválido ou expirado");
             filterChain.doFilter(request, response);
             return;
         }
 
         String email = JwtTokenProvider.getEmailFromToken(token);
 
-        toAuthentication(request, email);
+        if (StringUtils.hasText(email) && SecurityContextHolder.getContext().getAuthentication() == null) {
+            toAuthentication(request, email);
+        }
 
         filterChain.doFilter(request, response);
     }
 
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader(JwtTokenProvider.JWT_AUTHORIZATION);
+
+        if (StringUtils.hasText(authHeader) && authHeader.startsWith(JwtTokenProvider.JWT_BEARER)) {
+            return authHeader.substring(JwtTokenProvider.JWT_BEARER.length());
+        }
+
+        return null;
+    }
+
     private void toAuthentication(HttpServletRequest request, String email) {
 
-        UserDetails userDetails = detailsService.loadUserByUsername(email);
+        try {
+            UserDetails userDetails = detailsService.loadUserByUsername(email);
 
-        UsernamePasswordAuthenticationToken authenticationToken = UsernamePasswordAuthenticationToken
-                .authenticated(userDetails, null, userDetails.getAuthorities());
+            UsernamePasswordAuthenticationToken authenticationToken =
+                    new  UsernamePasswordAuthenticationToken (
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
 
-        authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+            logger.debug("Usuário autenticado: {}", email);
+        } catch (Exception e) {
+            logger.error("Erro ao autenticar usuário: {}", e.getMessage());
+        }
+
     }
 }

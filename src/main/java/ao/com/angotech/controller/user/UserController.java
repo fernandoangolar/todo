@@ -1,14 +1,13 @@
-package ao.com.angotech.controller;
+package ao.com.angotech.controller.user;
 
 import ao.com.angotech.dto.user.UserRequest;
 import ao.com.angotech.dto.user.UserResponse;
+import ao.com.angotech.entity.User;
 import ao.com.angotech.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -21,10 +20,17 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserResponse> save(@PathVariable UserRequest request) {
+    public ResponseEntity<UserResponse> save(@RequestBody @Valid UserRequest request) {
 
         UserResponse response = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
+        UserResponse response = userService.findById(id);
+        return ResponseEntity.status(HttpStatus.OK)
                 .body(response);
     }
 }
