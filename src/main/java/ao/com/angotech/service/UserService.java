@@ -11,4 +11,5 @@ public interface UserService {
     UserResponse register(UserRequest request);
     UserResponse findById(Long id);
     User findByEmail(String email);
+    User findEntityById(Long id); // Novo método para retornar a entidade
 }

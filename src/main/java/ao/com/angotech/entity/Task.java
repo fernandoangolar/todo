@@ -28,7 +28,7 @@ public class Task implements Serializable {
     private Date dueDate;
 
     @Enumerated(EnumType.STRING)
-    private TaskStatus status = TaskStatus.IN_PROGRESS;
+    private TaskStatus status = TaskStatus.PENDING;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
